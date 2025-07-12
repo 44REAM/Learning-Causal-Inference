@@ -18,7 +18,6 @@ def create_lagged_features(df, n_lags, unit, treatment, outcome, common_causes):
     # Drop rows with NaNs created by the shift operation
     return df_out.dropna().reset_index(drop=True)
 
-# The corrected SNMM estimation function
 def nsmm_lag1(df, unit, treatment, outcome, common_causes):
     """
     Estimates a Structural Nested Mean Model using sequential g-estimation,
