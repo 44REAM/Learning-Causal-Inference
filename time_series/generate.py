@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from scipy.special import expit
 
-
 def simulate_blackwell_glynn(n_units=1000, t_periods=10, seed=42):
     # ----------------------------------------------------------------
     # 1) Simulate Blackwell & Glynn style panel data

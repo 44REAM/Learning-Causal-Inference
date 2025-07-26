@@ -1,4 +1,5 @@
 import pandas as pd
+import itertools
 import numpy as np
 from sklearn.linear_model import LogisticRegression, LinearRegression
 
@@ -99,17 +100,25 @@ class MarginalStructuralModel:
     def get_fitted_data(self):
         return self._fitted_df
     
-import pandas as pd
-import numpy as np
-from sklearn.linear_model import LogisticRegression, LinearRegression
-
+    def summary(self):
+        model = self.outcome_model
+        coef_names = self.model_features
+        print("Model coefficients:")
+        for name, coef in zip(coef_names, model.coef_):
+            print(f"{name:>20}: {coef: .3f}")
+        print(f"{'Intercept':>20}: {model.intercept_: .3f}")
+    
 class MarginalStructuralModel:
-    def __init__(self, treatment, outcome, common_causes, id_col='patient_id', time_col='time'):
+    def __init__(self, treatment, 
+                 outcome, common_causes, 
+                 effect_modifiers = [], 
+                 id_col='patient_id', time_col='time'):
         self.treatment = treatment
         self.outcome = outcome
         self.common_causes = common_causes
         self.id_col = id_col
         self.time_col = time_col
+        self.user_effect_modifiers = effect_modifiers
         self.propensity_models = {}
         self.propensity_marginal_models = {}
         self.outcome_model = None
@@ -134,6 +143,22 @@ class MarginalStructuralModel:
         self.model_features = self.treatment + [f'{a}_lag1' for a in self.treatment]
         self.model_features += self.common_causes
         self.model_features += [f'{col}_lag1' for col in [self.outcome] + self.common_causes]
+
+        # Collect all effect modifiers (user + auto-added)
+        lagged_treatment = [f'{a}_lag1' for a in self.treatment]
+        lagged_outcome = [f'{self.outcome}_lag1']
+        self.effect_modifiers = list(set(
+            self.user_effect_modifiers + lagged_treatment + lagged_outcome
+        ))
+
+        # Add effect modifiers and interaction terms
+        self.interaction_terms = []
+
+        for a, em in itertools.product(self.treatment, self.effect_modifiers):
+            interaction_name = f'{a}_x_{em}'
+            df[interaction_name] = df[a] * df[em]
+            self.model_features.append(interaction_name)
+            self.interaction_terms.append(interaction_name)
 
         return df
 
@@ -196,3 +221,11 @@ class MarginalStructuralModel:
 
     def get_fitted_data(self):
         return self._fitted_df
+    
+    def summary(self):
+        model = self.outcome_model
+        coef_names = self.model_features
+        print("Model coefficients:")
+        for name, coef in zip(coef_names, model.coef_):
+            print(f"{name:>20}: {coef: .3f}")
+        print(f"{'Intercept':>20}: {model.intercept_: .3f}")
