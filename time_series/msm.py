@@ -123,7 +123,7 @@ class MarginalStructuralModel:
         self.propensity_marginal_models = {}
         self.outcome_model = None
 
-    def _prepare_data(self, df):
+    def _prepare_data(self, df, drop = True):
         df = df.sort_values([self.id_col, self.time_col]).copy()
 
         for a in self.treatment:
@@ -132,7 +132,8 @@ class MarginalStructuralModel:
         for col in [self.outcome] + self.common_causes:
             df[f'{col}_lag1'] = df.groupby(self.id_col)[col].shift(1)
 
-        df = df.dropna()
+        if drop:
+            df = df.dropna()
 
         # Define features dynamically after shift
         self.full_features = self.treatment + [f'{a}_lag1' for a in self.treatment]
@@ -205,6 +206,8 @@ class MarginalStructuralModel:
         w = df['sw']
         self.outcome_model = LinearRegression().fit(X, y, sample_weight=w)
 
+    
+
     def fit(self, df):
         df = self._prepare_data(df)
         self._fit_propensity_models(df)
@@ -212,9 +215,16 @@ class MarginalStructuralModel:
         self._fit_outcome_model(df)
         self._fitted_df = df
 
-    def predict(self, df):
-        df = self._prepare_data(df)
-        return self.outcome_model.predict(df[self.model_features])
+    def predict(self, df, prepare_data = True):
+        if prepare_data:
+            df = self._prepare_data(df, drop=False)
+        mask = df.isnull().any(axis=1)
+        preds = pd.Series(index=df.index, dtype='float64')
+        
+        preds[~mask] = self.outcome_model.predict(df[~mask][self.model_features])
+        preds[mask] = np.nan
+
+        return preds.to_numpy()
 
     def get_model(self):
         return self.outcome_model
