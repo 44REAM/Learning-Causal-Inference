@@ -112,7 +112,7 @@ class MarginalStructuralModel:
     def __init__(self, treatment, 
                  outcome, common_causes, 
                  effect_modifiers = [], 
-                 id_col='patient_id', time_col='time'):
+                 id_col='patient_id', time_col='time', prepare_data_function = None):
         self.treatment = treatment
         self.outcome = outcome
         self.common_causes = common_causes
@@ -123,7 +123,11 @@ class MarginalStructuralModel:
         self.propensity_marginal_models = {}
         self.outcome_model = None
 
-    def _prepare_data(self, df, drop = True):
+        self.prepare_data_function = None
+        if prepare_data_function is not None:
+            self.prepare_data_function = prepare_data_function
+    
+    def _prepare_data_lag1(self, df, drop = True):
         df = df.sort_values([self.id_col, self.time_col]).copy()
 
         for a in self.treatment:
@@ -162,6 +166,13 @@ class MarginalStructuralModel:
             self.interaction_terms.append(interaction_name)
 
         return df
+    def _prepare_data(self, df, drop = True):
+        if self.prepare_data_function is not None:
+            df, self.full_features, self.marg_features, self.model_features = self.prepare_data_function(df, drop = drop)
+            return df
+
+        else:
+            return self._prepare_data_lag1(df, drop=drop)
 
     def _fit_propensity_models(self, df):
         for a in self.treatment:
