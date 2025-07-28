@@ -381,7 +381,7 @@ def simulate(simulation_params, num_time_steps, assigned_actions=None):
     return get_simulate_df(outputs)
 
 def get_simulate_df(outputs):
-    features = ['cancer_volume', 'chemo_instant_dosage', 'radio_dosage']
+    features = ['cancer_volume', 'chemo_instant_dosage', 'radio_dosage', 'chemo_application', 'radio_application']
     cancer_volume_data = {key: outputs[key] for key in features if key in outputs}
 
 
